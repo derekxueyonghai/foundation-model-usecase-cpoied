@@ -34,7 +34,17 @@ class ViewModel: ObservableObject {
             let response = try await session.respond(to: prompt)
             output = response.content
         } catch {
-            errorMessage = error.localizedDescription
+            let nsError = error as NSError
+            // Print full error details to the console for diagnostics
+            print("LanguageModel error domain=\(nsError.domain) code=\(nsError.code) userInfo=\(nsError.userInfo)")
+
+            // If the error looks like an entitlement/provisioning generation failure,
+            // give an actionable error message pointing to the entitlements/capability.
+            if nsError.code == -1 || nsError.domain.contains("GenerationError") || nsError.domain.contains("FoundationModels") {
+                errorMessage = "The operation couldn't be completed. (FoundationModels.LanguageModelSession.GenerationError). This often means your app is missing the Foundation Models capability/entitlement. In Xcode open your target -> Signing & Capabilities -> add the entitlements file or add the 'Foundation Models' capability. Make sure Code Signing Entitlements is set and provisioning allows it."
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
 
         isProcessing = false
